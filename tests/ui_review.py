@@ -30,7 +30,7 @@ with sync_playwright() as p:
         page.locator('#question').fill(question)
         page.locator('#ask-form .send').click()
         expect(page.locator('#ask-form .send')).to_be_enabled(timeout=180000)
-        expect(page.locator('.secondary-box h3')).to_have_text(question.split('[Site ')[0].strip())
+        expect(page.locator('.conv-item.selected .chat-msg.user')).to_have_text(question.split('[Site ')[0].strip())
         fixed_board()
 
     def view(name):
@@ -43,7 +43,7 @@ with sync_playwright() as p:
     ask(question+'\n'+Path('static/partida-mauricio.pgn').read_text())
     expect(page.locator('.secondary-box')).to_contain_text('19 jugadas')
     expect(page.locator('.secondary-box')).to_contain_text('Stockfish')
-    page.locator('[data-evaluate]').click()
+    page.locator('#view-menu [data-view="evaluate"]').click()
     expect(page.locator('.results-table tbody tr')).not_to_have_count(0)
     page.screenshot(path=str(ARTIFACTS/'iajedrez-stockfish-summary.png'))
 

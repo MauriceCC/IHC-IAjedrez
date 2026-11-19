@@ -32,12 +32,14 @@ function progressCounts(){
  return SEVERITY.map(s=>{const list=rows.filter(r=>severityOf(r)===s.id);return {...s,total:list.length,done:list.filter(r=>reviewed.has(r.ply)).length};}).filter(s=>s.total);
 }
 function renderProgress(){
- const box=$('progress');if(!box)return;
- if(!report){box.innerHTML='';return;}
+ if(!report)return;
+ const box=$('progress');
  const counts=progressCounts(),total=counts.reduce((a,c)=>a+c.total,0),done=counts.reduce((a,c)=>a+c.done,0);
  const next=nextPending(),pulse=lastReviewed;lastReviewed=null;
  const pulsing=pulse&&severityOf(report.rows.find(r=>r.ply===pulse));
- box.innerHTML=`<div class="progress-strip"><div class="progress-chips">${counts.map(c=>`<button type="button" class="progress-chip sev-${c.id} ${c.done===c.total?'complete':''} ${pulsing===c.id?'pulse':''}" data-next-cat="${c.id}" title="${c.done===c.total?'Ver un error revisado en Evaluar':'Ver el siguiente pendiente en Evaluar'}" aria-label="${c.name}: ${c.done} de ${c.total} revisados. Ver en Evaluar"><span class="sev-symbol" aria-hidden="true">${c.symbol}</span>${c.short} <b>${c.done}/${c.total}</b>${c.done===c.total?' <span aria-hidden="true">✓</span>':''}</button>`).join('')}</div>${next?`<button type="button" class="next-pending" data-next-pending title="Atajo: N">Revisar ${esc(next.label)} →</button>`:`<span class="all-done">✓ Todo revisado</span>`}</div>`;
+ box.hidden=!counts.length;
+ box.innerHTML=`<div class="progress-chips">${counts.map(c=>`<button type="button" class="progress-chip sev-${c.id} ${c.done===c.total?'complete':''} ${pulsing===c.id?'pulse':''}" data-next-cat="${c.id}" title="${c.done===c.total?'Ver un error revisado en Evaluar':'Ver el siguiente pendiente en Evaluar'}" aria-label="${c.name}: ${c.done} de ${c.total} revisados. Ver en Evaluar"><span class="sev-symbol" aria-hidden="true">${c.symbol}</span>${c.short} <b>${c.done}/${c.total}</b>${c.done===c.total?' <span aria-hidden="true">✓</span>':''}</button>`).join('')}</div>`;
+ $('progress-action').innerHTML=`${next?`<button type="button" class="next-pending" data-next-pending title="Atajo: N">Revisar ${esc(next.label)} →</button>`:`<span class="all-done">✓ Todo revisado</span>`}`;
  progressTotals={done,total};
 }
 
@@ -67,7 +69,7 @@ function renderCrumbs(){
  }
  if(state.practice)items.push('<span aria-current="page">Práctica</span>');
  else if(state.line)items.push(`<span aria-current="page">Variante: ${esc(state.line.name)}</span>`);
- else if(state.secondary)items.push(`<span aria-current="page">Tu consulta</span>`);
+ else if(state.secondary)items.push(`<span aria-current="page">Conversación</span>`);
  const t=progressTotals;
  nav.innerHTML=`<button type="button" class="back-button" data-go-back ${backStack.length?'':'disabled'} title="Volver a la vista anterior (Alt + ←)">← Atrás</button><ol>${items.map(i=>`<li>${i}</li>`).join('')}</ol>${t?`<span class="crumb-progress">Revisados <b>${t.done}/${t.total}</b><span class="mini-bar" aria-hidden="true"><span style="width:${t.total?t.done/t.total*100:100}%"></span></span></span>`:''}`;
 }
@@ -129,32 +131,25 @@ function initDisplaySettings(){
  applyVision(vision.value);vision.onchange=()=>applyVision(vision.value);
 }
 
-/* ---------- Reinicio con confirmación específica (solo si se pierde progreso) ---------- */
-function resetSummary(){
- const done=errorRows().filter(r=>reviewed.has(r.ply)).length,pending=errorRows().length-done;
- return {done,pending,queries:threads.length};
-}
-function requestReset(){
- const {done,pending,queries}=resetSummary();
- if(!done&&!queries){performReset();return;}
- const box=$('reset-confirm');
- box.innerHTML=`<strong>¿Reiniciar la revisión?</strong><p>Se ${done+queries===1?'borrará':'borrarán'} ${done?`${done} ${done===1?'jugada revisada':'jugadas revisadas'}`:''}${done&&queries?' y ':''}${queries?`${queries} ${queries===1?'consulta':'consultas'}`:''}. ${pending?`Aún te ${pending===1?'queda 1 error pendiente':`quedan ${pending} errores pendientes`}.`:'Ya revisaste todos los errores.'}</p><div class="confirm-actions"><button type="button" class="danger-action" data-confirm-reset>Borrar mi progreso</button><button type="button" class="small-button" data-cancel-reset>Seguir revisando</button></div>`;
- box.showPopover();
- const r=$('reset').getBoundingClientRect();
- box.style.top=(r.bottom+8)+'px';box.style.left=Math.max(8,r.right-box.offsetWidth)+'px';
- box.querySelector('[data-cancel-reset]').focus();
-}
-function performReset(){
- reviewed.clear();writeStore('reviewed',[]);backStack.length=0;chainSeen={};
- threads=[];nextThread=1;$('question').value='';notice('');jump(0,'evaluate',false,'all');document.querySelector('.tree-scroll').scrollTop=0;
-}
-
 /* ---------- Atajos de teclado ---------- */
 function initShortcuts(){
+ const dialog=$('shortcuts'),menu=$('toolbar-menu');
+ const open=()=>{
+  if(menu.matches(':popover-open')){
+   menu.hidePopover();
+   document.querySelector('[popovertarget="toolbar-menu"]').focus();
+  }
+  dialog.showModal();
+ };
+ $('open-shortcuts').onclick=open;
  document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey)return;
+  if(dialog.open){
+   if(e.key==='?'){e.preventDefault();dialog.close();}
+   return;
+  }
   const typing=e.target.closest('input,textarea,select,[contenteditable]');
-  if(e.key==='Escape'){if(!typing&&exitMode())e.preventDefault();return;}
+  if(e.key==='Escape'){if(!typing&&!menu.matches(':popover-open')&&exitMode())e.preventDefault();return;}
   if(typing||!game)return;
   if(e.altKey){if(e.key==='ArrowLeft'){e.preventDefault();goBack();}return;}
   const click=id=>{const el=$(id);if(el&&!el.disabled){e.preventDefault();el.click();}};
@@ -163,8 +158,8 @@ function initShortcuts(){
   else if(e.key==='Home')click('first');
   else if(e.key==='End')click('last');
   else if(/^[1-3]$/.test(e.key)){e.preventDefault();document.querySelectorAll('[data-view]')[Number(e.key)-1]?.click();}
-  else if(e.key==='n'||e.key==='N'){const b=document.querySelector('[data-next-pending]');if(b){e.preventDefault();b.click();}}
+  else if(e.key==='n'||e.key==='N'){const b=$('progress-action').querySelector('[data-next-pending]');if(b){e.preventDefault();b.click();}}
   else if(e.key==='/'){e.preventDefault();$('question').focus();}
-  else if(e.key==='?'){e.preventDefault();const p=$('shortcuts');p.matches(':popover-open')?p.hidePopover():p.showPopover();}
+  else if(e.key==='?'){e.preventDefault();open();}
  });
 }
