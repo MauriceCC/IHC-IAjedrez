@@ -32,15 +32,15 @@ with sync_playwright() as p:
         expect(page.locator('.board-arrows')).to_have_count(0)
         expect(page.locator('#current-move')).to_contain_text(last)
         page.locator('[data-view="advice"]').click()
-        expect(page.locator('.evaluation-table tbody tr')).to_have_count(count)
-        assert page.locator('.evaluation-table th').evaluate_all('(es)=>es.map(e=>{const c=e.cloneNode(true);c.querySelectorAll(".type-legend").forEach(t=>t.remove());return c.textContent})')==['Jugada','Tipo ?','Consejo','Explicación']
+        expect(page.locator('.evaluation-table tbody tr:not(.group-row)')).to_have_count(count)
+        assert page.locator('.evaluation-table thead th').evaluate_all('(es)=>es.map(e=>{const c=e.cloneNode(true);c.querySelectorAll(".type-legend").forEach(t=>t.remove());return c.textContent})')==['Jugada','Tipo ?','Consejo','Explicación']
         page.locator('.type-help').hover()
         expect(page.locator('#type-legend')).to_contain_text('Brillante')
         page.keyboard.press('Escape')
         page.locator('.evaluation-table [data-preview]').first.click()
         expect(page.locator('[data-view="advice"]')).to_have_attribute('aria-pressed','true')
         expect(page.locator('.board-arrows')).to_be_visible()
-        page.locator('#results [data-back-line]').click()
+        page.locator('[data-exit-mode]').click()
         page.locator('.evaluation-table [data-jump]').first.click()
         expect(page.locator('[data-view="chain"]')).to_have_attribute('aria-pressed','true')
     page.goto(BASE+'/?game=entrevista')

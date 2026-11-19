@@ -37,18 +37,20 @@ document.addEventListener('click',event=>{
 },true);
 window.addEventListener('resize',closeTypeLegend);
 function moveTypeIcon(row){
+ // Forma, símbolo y luminancia distintos: se distinguen sin color y en escala de grises.
  const types={
-  'Error grave':['??','#ce3c48'],
-  'Error':['?','#d77819'],
-  'Imprecisión':['?!','#b18a12'],
-  'Permite mate':['#','#823c97'],
-  'Pierde mate forzado':['#','#823c97'],
-  'Línea de mate':['#','#823c97'],
-  'Sin caída importante':['✓','#287b65']
-  ,'Buena':['✓','#287b65'],'Excelente':['!','#328651'],'Mejor jugada':['★','#287b65'],'Brillante':['!!','#168e9c']
+  'Error grave':['??','#8f1d2a','octagon'],
+  'Error':['?','#f0892c','circle','#1d1000'],
+  'Imprecisión':['?!','#f8e07c','square','#4a3800'],
+  'Permite mate':['#','#6a2d80','octagon'],
+  'Pierde mate forzado':['#','#6a2d80','octagon'],
+  'Línea de mate':['#','#6a2d80','circle'],
+  'Sin caída importante':['✓','#287b65','circle'],
+  'Buena':['✓','#287b65','circle'],'Excelente':['!','#287b65','circle'],'Mejor jugada':['★','#1f6a56','circle'],'Brillante':['!!','#168e9c','circle']
  };
- const [symbol,color]=types[row.kind]||['•','#63758b'];
- return `<span tabindex="0" class="move-icon" role="img" title="${esc(row.kind)}" aria-label="${esc(row.kind)}"><svg viewBox="0 0 36 36" width="36" height="36" aria-hidden="true" focusable="false"><circle cx="18" cy="18" r="17" fill="${color}"/><text x="18" y="24" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-weight="800" font-size="${symbol.length>1?18:23}">${symbol}</text></svg></span>`;
+ const [symbol,color,shape,ink='#fff']=types[row.kind]||['•','#63758b','circle'];
+ const outline=shape==='octagon'?'<polygon points="11,1 25,1 35,11 35,25 25,35 11,35 1,25 1,11" fill="'+color+'"/>':shape==='square'?'<rect x="2" y="2" width="32" height="32" rx="7" fill="'+color+'" stroke="#8a6d00" stroke-width="1.5"/>':'<circle cx="18" cy="18" r="17" fill="'+color+'"/>';
+ return `<span tabindex="0" class="move-icon" role="img" title="${esc(row.kind)}" aria-label="${esc(row.kind)}"><svg viewBox="0 0 36 36" width="36" height="36" aria-hidden="true" focusable="false">${outline}<text x="18" y="24" text-anchor="middle" fill="${ink}" font-family="Arial, sans-serif" font-weight="800" font-size="${symbol.length>1?17:22}">${symbol}</text></svg></span>`;
 }
 function priorityTable(){return evaluationTable(true);}
 function studyLearning(){
@@ -61,5 +63,5 @@ function studyLearning(){
   ['Apertura de peón de rey',3,'Tu partida comienza 1.e4 e5 2.d3. Estudia desarrollo y control central antes del avance f4; esta referencia corresponde a la familia general de la apertura.','https://lichess.org/opening/Kings_Pawn_Game','Explorar la apertura y partidas modelo'],
   ['Seguridad del rey',17,'Después de 9.Cd2 llegó …Dxg3+ y 10.Re2 fue la única respuesta legal. Revisa cómo los jaques impidieron enrocar y compara las alternativas del motor. En el recurso externo, empieza por patrones de mate y jaques dobles.','https://lichess.org/practice','Estudiar patrones de mate y táctica']
  ];
- return contextBar()+(isGemini?GeminiUI.cards():'')+`<div class="lesson-hero"><h3>Aprende de tu partida</h3><p>Explora temas seleccionados a partir de tu PGN y de las variantes del motor: ubícalos en el tablero y prueba una alternativa. Los recursos externos te ayudan a comprender cada concepto; puedes cambiar el idioma en Lichess.</p></div>`+topics.map(([title,ply,text,url,link])=>{const row=report.rows.find(r=>r.ply===ply);return `<article class="lesson-prompt"><h3>${esc(title)}</h3><p>${esc(text)}</p><p class="table-foot">Posición vinculada: ${esc(label(ply))}. Candidata calculada: ${esc(es(row.best.san[0]))} · ${esc(score(row.best))}.</p><div class="lesson-actions">${button('Ver en mi partida',`data-topic-position="${ply}"`)}${button('Practicar desde aquí',`data-topic-practice="${ply}"`)}</div><p><a href="${url}" target="_blank" rel="noopener">${esc(link)} ↗</a><small> · Lichess · gratuito</small></p></article>`;}).join('');
+ return contextBar()+(isGemini?GeminiUI.cards():'')+`<div class="view-intro"><h3>Aprende de tu partida</h3><span class="hint">${topics.length} temas vinculados a tus jugadas</span></div><p class="table-help">Cada tema enlaza una posición de tu partida: «Ver en mi partida» la muestra en el tablero y «Practicar desde aquí» te deja probar otra jugada.</p>`+topics.map(([title,ply,text,url,link])=>{const row=report.rows.find(r=>r.ply===ply);return `<article class="topic-card"><h4>${esc(title)} <span class="topic-move">${esc(label(ply))}</span></h4><p>${brief(text)}</p><p class="topic-meta">Candidata calculada: <strong class="san">${esc(es(row.best.san[0]))}</strong> · ${esc(score(row.best))}</p><div class="lesson-actions">${button('Ver en mi partida',`data-topic-position="${ply}"`)}${button('Practicar desde aquí',`data-topic-practice="${ply}"`)}<a class="ext-link" href="${url}" target="_blank" rel="noopener">${esc(link)} en Lichess<span class="sr-only"> (abre una pestaña nueva)</span> ↗</a></div></article>`;}).join('');
 }

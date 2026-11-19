@@ -1,5 +1,9 @@
 # Continuidad de IAjedrez para otros agentes
 
+## Mejoras IHC según checklist (19 nov. 2026)
+
+Se aplicó `docs/IHC-Checklist.pdf` sobre el diseño aprobado, sin cambiar la distribución de tres columnas. Ver `docs/CAMBIOS_IHC.md` para el detalle regla por regla. Lo esencial: `static/ihc-ui.js` añade el submenú de progreso («?? Graves 1/4 …» + «Revisar siguiente →», guardado en `localStorage` con la clave `iajedrez:reviewed:<estudio>`), la ruta de navegación con «← Atrás», el indicador de modo variante/práctica en el tablero (Esc para salir), los atajos de teclado, el contraste alto, la simulación de daltonismo (`?vision=`) y la confirmación de reinicio solo cuando hay progreso. La tabla de Evaluación se agrupa en bloques de 10 jugadas y tiene filtros. Los íconos de gravedad usan forma, símbolo y luminancia. El inicio muestra miniaturas y progreso. Una jugada con error cuenta como revisada al abrirla en Cadena, en una consulta o en la práctica.
+
 ## Evaluación, tablas y flechas de variantes
 
 «Consejos» se renombró «Evaluación» en los tres estudios. `static/evaluation-ui.js` comparte las tablas: Jugada abre Cadena; Consejo/Explicación/Jugada sugerida abren la candidata guardada conservando la pestaña. Resumen muestra la pérdida en Tipo y los valores del motor bajo jugada real y sugerida. Las explicaciones combinan motivos revisados de las conversaciones y descripciones limitadas de la variante calculada; no se inventan diagnósticos posicionales generales.
