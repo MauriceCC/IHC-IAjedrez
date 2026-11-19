@@ -33,7 +33,6 @@ function progressCounts(){
 }
 function renderProgress(){
  const box=$('progress');if(!box)return;
- const status=$('engine-status');if(status&&report)status.lastChild.textContent=`${report.engine} · ${report.preloaded?'análisis guardado':'análisis calculado'}`;
  if(!report){box.innerHTML='';return;}
  const counts=progressCounts(),total=counts.reduce((a,c)=>a+c.total,0),done=counts.reduce((a,c)=>a+c.done,0);
  const next=nextPending(),pulse=lastReviewed;lastReviewed=null;

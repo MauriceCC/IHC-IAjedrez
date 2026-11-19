@@ -20,14 +20,5 @@ const InterviewUI={
   const switcher=`<p class="table-foot"><a href="/?game=mauricio">Abrir el estudio anterior: Mauricio0120</a></p>`;
   return intro+`<p class="lesson-prompt">Partida completa: 54 jugadas. La conversación original no usó motor. Pulsa Analizar para calcular las 54 decisiones de blancas y contrastar tus dudas; la primera revisión puede tardar unos minutos.</p>${button('Analizar mi partida','data-task="summary"')}${this.cards()}${switcher}`;
  },
- timeline(){return `<div class="view-intro"><h3>Desde la apertura hasta el final</h3></div><div class="lesson-actions">${[[1,'1–15 · Apertura'],[31,'16 · Ruptura'],[41,'21 · Torre activa'],[57,'29 · Seguridad del rey'],[77,'39 · Cambio de damas'],[89,'45 · Caballo'],[107,'54 · Final']].map(([ply,text])=>button(text,`data-jump="${ply}"`)).join('')}</div>`;},
  references(){return contextBar()+`<div class="view-intro"><h3>Qué dijo cada fuente</h3></div><p class="lesson-prompt">La conversación se conserva como síntesis atribuida. Stockfish calcula jugadas y variantes; no valida automáticamente toda una explicación en lenguaje natural.</p>${[31,41,57,89].map(ply=>this.topic(ply)).join('')}<div class="resource-row"><a class="link-resource" href="/static/partida-entrevista.pgn" download>Partida completa con relojes (PGN)</a></div><div class="resource-row"><a class="link-resource" href="/static/conversacion-entrevista.md" target="_blank" rel="noopener">Síntesis de la conversación y correcciones</a></div><div class="resource-row"><a class="link-resource" href="https://stockfishchess.org/" target="_blank" rel="noopener">Stockfish · proyecto oficial</a></div>${report?evidenceNote():''}`;}
 };
-
-document.addEventListener('click',async event=>{
- const link=event.target.closest('[data-evidence-download]');if(!link)return;
- event.preventDefault();
- if(!report)return;
- const url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));
- const a=document.createElement('a');a.href=url;a.download='stockfish-sTNRsqPl.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-});

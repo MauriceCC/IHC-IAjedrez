@@ -1,5 +1,4 @@
 """Real browser/API review of the supplied conversation. Start uvicorn first."""
-import json
 import os
 import tempfile
 from pathlib import Path
@@ -62,12 +61,6 @@ with sync_playwright() as p:
     expect(page.locator('.secondary-box h3')).to_have_text('¿Qué ocurrió en 45.Nc7?')
     page.locator('[data-evaluate]').click()
     expect(page.locator('.results-table tbody tr').first).to_be_visible()
-    page.locator('.evaluation-extras > summary').click()
-    with page.expect_download() as download:
-        page.locator('[data-evidence-download]').click()
-    path = ARTIFACTS/'iajedrez-interview-ui-evidence.json'
-    download.value.save_as(path)
-    assert len(json.loads(path.read_text(encoding='utf-8'))['rows']) == 54
     view('evaluate')
     expect(page.locator('.evaluation-table [data-jump]')).to_have_count(54)
     page.locator('#results').evaluate('(e)=>e.scrollTop=e.scrollHeight')
@@ -84,6 +77,6 @@ with sync_playwright() as p:
     page.goto(BASE+'/?game=mauricio')
     expect(page.locator('.player-name').last).to_have_text('Mauricio0120')
     assert not errors, errors
-    print('PASS: desktop/mobile, conversation, engine variants, practice, return, download, original study; no console errors.')
+    print('PASS: desktop/mobile, conversation, engine variants, practice, return, original study; no console errors.')
     print(ARTIFACTS)
     browser.close()
