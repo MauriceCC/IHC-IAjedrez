@@ -20,36 +20,47 @@ function moveReason(row){
  return `Tras esta decisión, el motor encuentra ${follow||'una continuación más favorable al rival'}. La valoración empeora frente a la candidata; recorre ambas líneas para comparar la actividad y el material.`;
 }
 function suggestionReason(row){
- const san=row.best.san[0],reply=row.best.san[1];
- return `${san.includes('x')?'Captura':san.includes('+')?'Da jaque con':'Prueba'} ${es(san)}${reply?'; la respuesta calculada es '+es(reply):''}. ${row.best.pv[0]===row.move?'Coincide con tu jugada.':'Ofrece '+score(row.best)+' frente a '+score(row.played)+' de la jugada real.'}`;
+ const reply=row.best.san[1];
+ return row.best.pv[0]===row.move?'Coincide con tu jugada.':reply?`Respuesta calculada: ${es(reply)}.`:'';
 }
 function typeCell(row){
  const kind=teachingType(row);
- return `${moveTypeIcon({...row,kind})}<small class="type-name">${esc(kind)}</small>${row.loss_cp===null?'':`<small class="loss-value" title="Ventaja perdida frente a la candidata del motor">−${(row.loss_cp/100).toFixed(2)} peones</small><span class="loss-track" aria-hidden="true"><span style="width:${Math.min(100,row.loss_cp/5)}%"></span></span>`}`;
+ return `${moveTypeIcon({...row,kind})}<small class="type-name">${esc(kind)}</small>${row.loss_cp>0?`<small class="loss-value" title="Ventaja perdida frente a la candidata del motor">−${(row.loss_cp/100).toFixed(2)} peones</small>`:''}`;
 }
 function reviewTag(row){
  if(!severityOf(row))return '';
  return reviewed.has(row.ply)?'<span class="review-tag done">✓ Revisada</span>':'<span class="review-tag">Pendiente</span>';
 }
-function legendStrip(){return `<p class="legend-strip" aria-label="Leyenda de tipos"><span><b class="sev-grave">??</b> Error grave ≥ 2</span><span><b class="sev-error">?</b> Error 1–2</span><span><b class="sev-inacc">?!</b> Imprecisión 0,5–1</span><span><b class="sev-ok">✓</b> Sin caída importante</span><span class="legend-unit">peones de ventaja perdidos</span></p>`;}
-function evaluationTable(priority=false){
- const all=priority?report.ranking.filter(r=>r.priority>=50):report.rows;
- const withError=all.filter(r=>r.priority>=50).length;
- const rows=priority||evalFilter==='all'?all:all.filter(r=>evalFilter==='errors'?r.priority>=50:r.priority<50);
- const filters=priority?'':`<div class="filter-chips" role="group" aria-label="Filtrar jugadas">${[['all','Todas',all.length],['errors','Con error',withError],['good','Sin caída importante',all.length-withError]].map(([id,name,n])=>`<button type="button" class="filter-chip ${evalFilter===id?'chosen':''}" data-filter="${id}" aria-pressed="${evalFilter===id}">${name} <b>${n}</b></button>`).join('')}</div>`;
+function evaluationTable(){
+ const all=report.rows,errors=errorRows(),filter=state.filter;
+ const rows=filter==='errors'?errors:filter==='good'?all.filter(row=>!severityOf(row)):all;
+ const filters=`<div class="filter-chips" role="group" aria-label="Filtrar jugadas">${[['all','Todas',all.length],['errors','Con error',errors.length],['good','Sin caída importante',all.length-errors.length]].map(([id,name,n])=>`<button type="button" class="filter-chip ${filter===id?'chosen':''}" data-filter="${id}" aria-pressed="${filter===id}">${name} <b>${n}</b></button>`).join('')}</div>`;
  let block=-1;
  const body=rows.map(row=>{
   const reason=moveReason(row),suggestion=suggestionReason(row);
   const moveNo=Math.ceil(row.ply/2),group=Math.floor((moveNo-1)/10);
-  const header=!priority&&group!==block?`<tr class="group-row"><th colspan="4" scope="colgroup">Jugadas ${group*10+1}–${group*10+10}</th></tr>`:'';block=group;
-  const real=`<button class="cell-move" type="button" data-jump="${row.ply}" title="Revisar ${esc(row.label)} paso a paso">${esc(row.label)}<small class="eval-score">${esc(score(row.played))}</small></button>${reviewTag(row)}`;
-  const seeBoard=`<button type="button" class="see-board" data-preview="${row.ply}" title="Muestra la variante sugerida en el tablero">▶ Ver en el tablero</button>`;
-  const recommended=`<b class="san">${esc(es(row.best.san[0]))}</b><small class="eval-score">${esc(score(row.best))}</small>`;
-  const explanation=`<div class="cell-text">${brief(reason)}</div>`;
-  const advice=`<div class="cell-text">${priority?recommended:''}${brief(suggestion)}${seeBoard}</div>`;
-  return `${header}<tr class="${focusPly()===row.ply?'highlight-row':''}"><td>${real}</td><td>${typeCell(row)}</td><td>${priority?explanation:advice}</td><td>${priority?advice:explanation}</td></tr>`;
+  const header=filter!=='errors'&&group!==block?`<tr class="group-row"><th colspan="4">Jugadas ${group*10+1}–${group*10+10}</th></tr>`:'';block=group;
+  const selected=focusPly()===row.ply;
+  const real=`<button class="cell-move" type="button" data-jump="${row.ply}" ${selected?'aria-current="true"':''} title="Revisar ${esc(row.label)} paso a paso">${esc(row.label)}<small class="eval-score">${esc(score(row.played))}</small></button>${reviewTag(row)}`;
+  const seeBoard=`<button type="button" class="see-board" data-preview="${row.ply}" aria-label="Ver la sugerencia para ${esc(row.label)} en el tablero">▶ Ver en el tablero</button>`;
+  const recommended=`<b class="san">${esc(es(row.best.san[0]))}</b> <small class="eval-score">${esc(score(row.best))}</small>`;
+  const explanation=`<div class="cell-text desktop-explanation">${brief(reason)}</div><details class="mobile-explanation"><summary>Ver explicación<span class="sr-only"> de ${esc(row.label)}</span></summary><div class="cell-text">${fmt(reason)}${suggestion?`<p>${fmt(suggestion)}</p>`:''}</div></details>`;
+  const advice=`<div class="cell-text">${recommended}${suggestion?`<div class="suggestion-response">${fmt(suggestion)}</div>`:''}${seeBoard}</div>`;
+  return `${header}<tr class="${selected?'highlight-row':''}"><td>${real}</td><td>${typeCell(row)}</td><td>${advice}</td><td>${explanation}</td></tr>`;
  }).join('');
- return `<div class="view-intro"><h3>${priority?'Errores prioritarios':'Evaluación de tus jugadas'}</h3><span class="hint">${priority?'Ordenados de mayor a menor pérdida':`${all.length} decisiones de blancas`}</span></div>${filters}<p class="table-help">Pulsa una jugada para revisarla paso a paso. «Ver en el tablero» muestra la variante sugerida sin salir de esta tabla.</p><div class="table-wrap"><table class="results-table priority-table evaluation-table"><thead><tr><th scope="col">Jugada</th><th scope="col">Tipo ${typeLegend()}</th><th scope="col">${priority?'Explicación':'Consejo'}</th><th scope="col">${priority?'Jugada sugerida':'Explicación'}</th></tr></thead><tbody>${body||'<tr><td colspan="4">No hay jugadas en este filtro.</td></tr>'}</tbody></table></div>${legendStrip()}`;
+ return `${filters}${filter==='errors'?'<p class="evaluation-order">De mayor a menor pérdida de ventaja</p>':''}<div class="table-wrap" tabindex="0" role="region" aria-label="Tabla desplazable de evaluación"><table class="results-table evaluation-table" aria-label="Evaluar jugadas de blancas"><thead><tr><th scope="col">Jugada</th><th scope="col">Tipo ${typeLegend()}</th><th scope="col">Consejo</th><th scope="col">Explicación</th></tr></thead><tbody>${body||'<tr><td colspan="4">No hay jugadas en este filtro.</td></tr>'}</tbody></table></div>`;
+}
+function showErrorInEvaluation(ply){
+ jump(ply,'evaluate',true,'errors');
+ showMobilePanel('right-panel');
+ const move=$('results').querySelector(`[data-jump="${ply}"]`);
+ move?.focus({preventScroll:true});
+ if(move){
+  const results=$('results');
+  const viewport=results.getBoundingClientRect();
+  const row=move.closest('tr').getBoundingClientRect();
+  if(row.top<viewport.top||row.bottom>viewport.bottom)results.scrollTop+=row.top-viewport.top-results.clientTop;
+ }
 }
 async function previewSuggestion(ply){
  const row=report.rows.find(r=>r.ply===ply);if(!row)return;

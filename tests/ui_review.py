@@ -17,9 +17,9 @@ with sync_playwright() as p:
     page.on('pageerror', lambda error: errors.append(str(error)))
     page.on('console', lambda msg: errors.append(msg.text) if msg.type == 'error' else None)
     page.goto(BASE_URL+'/?game=mauricio')
-    expect(page).to_have_title('IAjedrez — Análisis de ajedrez con IA | Prototipo')
+    expect(page).to_have_title('IAjedrez — Análisis de partida')
     expect(page.locator('#board .square')).to_have_count(64)
-    expect(page.locator('.response-tabs button')).to_have_count(5)
+    expect(page.locator('.response-tabs button')).to_have_count(3)
     board_box = page.locator('#board').bounding_box()
 
     def fixed_board():
@@ -35,7 +35,7 @@ with sync_playwright() as p:
 
     def view(name):
         page.locator(f'#view-menu [data-view="{name}"]').click()
-        expect(page.locator('[data-view="summary"]')).to_be_enabled(timeout=180000)
+        expect(page.locator('[data-view="evaluate"]')).to_be_enabled(timeout=180000)
         fixed_board()
 
     # The same first question, including the supplied PGN, is sent to the real API.
@@ -43,7 +43,7 @@ with sync_playwright() as p:
     ask(question+'\n'+Path('static/partida-mauricio.pgn').read_text())
     expect(page.locator('.secondary-box')).to_contain_text('19 jugadas')
     expect(page.locator('.secondary-box')).to_contain_text('Stockfish')
-    page.locator('[data-summary]').click()
+    page.locator('[data-evaluate]').click()
     expect(page.locator('.results-table tbody tr')).not_to_have_count(0)
     page.screenshot(path=str(ARTIFACTS/'iajedrez-stockfish-summary.png'))
 
@@ -122,7 +122,7 @@ with sync_playwright() as p:
     page.set_viewport_size({'width':390,'height':844})
     page.locator('[data-panel="right-panel"]').click()
     board_box = page.locator('#board').bounding_box()
-    for name in ['advice','resources','chain','learn']:
+    for name in ['evaluate','chain','learn']:
         view(name)
         results = page.locator('#results')
         results.hover()

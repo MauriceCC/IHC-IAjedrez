@@ -21,7 +21,7 @@ with sync_playwright() as p:
     expect(page.locator('#board .square')).to_have_count(64)
     expect(page.locator('.player-name').last).to_have_text('Timmy-t')
     expect(page.locator('.sample-tag')).to_contain_text('tiempo')
-    expect(page.locator('.response-tabs button')).to_have_count(5)
+    expect(page.locator('.response-tabs button')).to_have_count(3)
     box = page.locator('#board').bounding_box()
 
     def ask(question):
@@ -33,7 +33,7 @@ with sync_playwright() as p:
 
     def view(name):
         page.locator(f'[data-view="{name}"]').click()
-        expect(page.locator('[data-view="summary"]')).to_be_enabled(timeout=300000)
+        expect(page.locator('[data-view="evaluate"]')).to_be_enabled(timeout=300000)
 
     ask('¿Cuáles fueron mis errores?\n'+Path('static/partida-entrevista.pgn').read_text(encoding='utf-8'))
     expect(page.locator('.secondary-box')).to_contain_text('54 decisiones')
@@ -60,15 +60,16 @@ with sync_playwright() as p:
     expect(page.locator('#board [data-square="g7"]')).to_contain_text('♘')
     page.locator('[data-exit-learn]').click()
     expect(page.locator('.secondary-box h3')).to_have_text('¿Qué ocurrió en 45.Nc7?')
-    page.locator('[data-summary]').click()
+    page.locator('[data-evaluate]').click()
     expect(page.locator('.results-table tbody tr').first).to_be_visible()
+    page.locator('.evaluation-extras > summary').click()
     with page.expect_download() as download:
         page.locator('[data-evidence-download]').click()
     path = ARTIFACTS/'iajedrez-interview-ui-evidence.json'
     download.value.save_as(path)
     assert len(json.loads(path.read_text(encoding='utf-8'))['rows']) == 54
-    view('advice')
-    expect(page.locator('.results-table tbody tr')).to_have_count(54)
+    view('evaluate')
+    expect(page.locator('.evaluation-table [data-jump]')).to_have_count(54)
     page.locator('#results').evaluate('(e)=>e.scrollTop=e.scrollHeight')
     assert page.locator('#board').bounding_box() == box
     view('resources')

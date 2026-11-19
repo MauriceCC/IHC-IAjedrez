@@ -38,7 +38,7 @@ function renderProgress(){
  const counts=progressCounts(),total=counts.reduce((a,c)=>a+c.total,0),done=counts.reduce((a,c)=>a+c.done,0);
  const next=nextPending(),pulse=lastReviewed;lastReviewed=null;
  const pulsing=pulse&&severityOf(report.rows.find(r=>r.ply===pulse));
- box.innerHTML=`<div class="progress-strip"><div class="progress-chips">${counts.map(c=>`<button type="button" class="progress-chip sev-${c.id} ${c.done===c.total?'complete':''} ${pulsing===c.id?'pulse':''}" data-next-cat="${c.id}" title="${c.done===c.total?'Todos revisados':'Ir al siguiente pendiente de este tipo'}" aria-label="${c.name}: ${c.done} de ${c.total} revisados"><span class="sev-symbol" aria-hidden="true">${c.symbol}</span>${c.short} <b>${c.done}/${c.total}</b>${c.done===c.total?' <span aria-hidden="true">✓</span>':''}</button>`).join('')}</div>${next?`<button type="button" class="next-pending" data-next-pending title="Atajo: N">Revisar ${esc(next.label)} →</button>`:`<span class="all-done">✓ Todo revisado</span>`}</div>`;
+ box.innerHTML=`<div class="progress-strip"><div class="progress-chips">${counts.map(c=>`<button type="button" class="progress-chip sev-${c.id} ${c.done===c.total?'complete':''} ${pulsing===c.id?'pulse':''}" data-next-cat="${c.id}" title="${c.done===c.total?'Ver un error revisado en Evaluar':'Ver el siguiente pendiente en Evaluar'}" aria-label="${c.name}: ${c.done} de ${c.total} revisados. Ver en Evaluar"><span class="sev-symbol" aria-hidden="true">${c.symbol}</span>${c.short} <b>${c.done}/${c.total}</b>${c.done===c.total?' <span aria-hidden="true">✓</span>':''}</button>`).join('')}</div>${next?`<button type="button" class="next-pending" data-next-pending title="Atajo: N">Revisar ${esc(next.label)} →</button>`:`<span class="all-done">✓ Todo revisado</span>`}</div>`;
  progressTotals={done,total};
 }
 
@@ -46,17 +46,17 @@ function renderProgress(){
 const backStack=[];
 function remember(){
  if(!game)return;
- backStack.push({state:clone(state),returnLine:returnLine&&clone(returnLine),returnLearn:returnLearn&&clone(returnLearn)});
+ backStack.push({state:clone(state),scrollTop:$('results').scrollTop,returnLine:returnLine&&clone(returnLine),returnLearn:returnLearn&&clone(returnLearn)});
  if(backStack.length>40)backStack.shift();
 }
 function goBack(){
  const snap=backStack.pop();if(!snap)return;
  state=snap.state;returnLine=snap.returnLine;returnLearn=snap.returnLearn;selected='';
- render();revealSelection();$('results').scrollTop=0;
+ render();revealSelection();$('results').scrollTop=snap.scrollTop;
 }
 
 /* ---------- Ruta de navegación ---------- */
-const VIEW_TITLES={summary:'Resumen de errores',advice:'Evaluación',chain:'Cadena',learn:'Aprende'};
+const VIEW_TITLES={evaluate:'Evaluar',chain:'Concatenar',learn:'Aprender',resources:'Referencias'};
 function renderCrumbs(){
  const nav=$('crumbs');if(!nav||!game)return;
  const items=[];
@@ -97,11 +97,14 @@ function brief(text){
  if(!m||m[1].length<40)return fmt(text);
  return `${fmt(m[1])} <details class="more"><summary>Ver más</summary>${fmt(m[2])}</details>`;
 }
-function severityBadge(row){
+function severityBadge(row,link=false){
  const sev=severityOf(row);
  if(!row)return '';
  const sym=sev?SEVERITY.find(s=>s.id===sev).symbol:'✓';
- return `<span class="sev-badge sev-${sev||'ok'}"><span aria-hidden="true">${sym}</span> ${esc(teachingType(row))}</span>`;
+ const classes=`sev-badge sev-${sev||'ok'}`;
+ const content=`<span aria-hidden="true">${sym}</span> ${esc(teachingType(row))}`;
+ if(link&&sev)return `<button type="button" class="${classes} board-error-link" data-error-ply="${row.ply}" aria-label="Ver ${esc(row.kind)} de ${esc(row.label)} en Evaluar">${content}</button>`;
+ return `<span class="${classes}">${content}</span>`;
 }
 
 /* ---------- Ajustes de visualización: contraste alto y simulación de color ---------- */
@@ -144,7 +147,7 @@ function requestReset(){
 }
 function performReset(){
  reviewed.clear();writeStore('reviewed',[]);backStack.length=0;chainSeen={};
- threads=[];nextThread=1;$('question').value='';notice('');jump(0,'summary');document.querySelector('.tree-scroll').scrollTop=0;
+ threads=[];nextThread=1;$('question').value='';notice('');jump(0,'evaluate',false,'all');document.querySelector('.tree-scroll').scrollTop=0;
 }
 
 /* ---------- Atajos de teclado ---------- */
@@ -160,7 +163,7 @@ function initShortcuts(){
   else if(e.key==='ArrowRight')click('next');
   else if(e.key==='Home')click('first');
   else if(e.key==='End')click('last');
-  else if(/^[1-4]$/.test(e.key)){e.preventDefault();document.querySelectorAll('[data-view]')[Number(e.key)-1]?.click();}
+  else if(/^[1-3]$/.test(e.key)){e.preventDefault();document.querySelectorAll('[data-view]')[Number(e.key)-1]?.click();}
   else if(e.key==='n'||e.key==='N'){const b=document.querySelector('[data-next-pending]');if(b){e.preventDefault();b.click();}}
   else if(e.key==='/'){e.preventDefault();$('question').focus();}
   else if(e.key==='?'){e.preventDefault();const p=$('shortcuts');p.matches(':popover-open')?p.hidePopover():p.showPopover();}
